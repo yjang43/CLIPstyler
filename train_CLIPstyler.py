@@ -1,3 +1,17 @@
+"""
+Meta TODO: Style transfer for audio
+- Cannot do feature extraction from VGG network
+- Use CLAP pretrained model instead
+1) raw audio
+- Modify UNet to 1DConvNet
+- Change augmentation scheme to retrieve patch when audio exists
+- Redefine loss function
+
+2) mel spectrogram
+- TBU
+"""
+
+
 from PIL import Image
 import numpy as np
 
@@ -14,6 +28,7 @@ from template import imagenet_templates
 
 from PIL import Image 
 import PIL 
+# TODO: torchaudio
 from torchvision import utils as vutils
 import argparse
 from torchvision.transforms.functional import adjust_contrast
@@ -40,10 +55,13 @@ parser.add_argument('--crop_size', type=int, default=128,
                     help='cropped image size')
 parser.add_argument('--num_crops', type=int, default=64,
                     help='number of patches')
+
+# TODO: replace with audio related parameters
 parser.add_argument('--img_width', type=int, default=512,
                     help='size of images')
 parser.add_argument('--img_height', type=int, default=512,
                     help='size of images')
+
 parser.add_argument('--max_step', type=int, default=200,
                     help='Number of domains')
 parser.add_argument('--lr', type=float, default=5e-4,
@@ -54,15 +72,22 @@ args = parser.parse_args()
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
+# TODO: replace with audio related constraints
 assert (args.img_width%8)==0, "width must be multiple of 8"
 assert (args.img_height%8)==0, "height must be multiple of 8"
 
+
+# TODO: audio pretrained model to extract feature instead of VGG
 VGG = models.vgg19(pretrained=True).features
 VGG.to(device)
 
 for parameter in VGG.parameters():
     parameter.requires_grad_(False)
     
+
+
+# TODO: audio normalization instead
 def img_denormalize(image):
     mean=torch.tensor([0.485, 0.456, 0.406]).to(device)
     std=torch.tensor([0.229, 0.224, 0.225]).to(device)
@@ -91,7 +116,8 @@ def clip_normalize(image,device):
     image = (image-mean)/std
     return image
 
-    
+
+# TODO: understand how this regularization term will affect audio
 def get_image_prior_losses(inputs_jit):
     diff1 = inputs_jit[:, :, :, :-1] - inputs_jit[:, :, :, 1:]
     diff2 = inputs_jit[:, :, :-1, :] - inputs_jit[:, :, 1:, :]
@@ -102,10 +128,13 @@ def get_image_prior_losses(inputs_jit):
     
     return loss_var_l2
 
+
+# TODO: change template.py to get prompts related to the audio
 def compose_text_with_templates(text: str, templates=imagenet_templates) -> list:
     return [template.format(text) for template in templates]
 
 content_path = args.content_path
+# TODO: load audio instead
 content_image = utils.load_image2(content_path, img_height=args.img_height,img_width=args.img_width)
 content = args.content_name
 exp = args.exp_name
@@ -141,11 +170,12 @@ output_image = content_image
 m_cont = torch.mean(content_image,dim=(2,3),keepdim=False).squeeze(0)
 m_cont = [m_cont[0].item(),m_cont[1].item(),m_cont[2].item()]
 
+# TODO: image augmentation only when audio exists
 cropper = transforms.Compose([
     transforms.RandomCrop(args.crop_size)
 ])
 augment = transforms.Compose([
-    transforms.RandomPerspective(fill=0, p=1,distortion_scale=0.5),
+ transforms.RandomPerspective(fill=0, p=1,distortion_scale=0.5),
     transforms.Resize(224)
 ])
 device='cuda'
